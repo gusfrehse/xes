@@ -1,0 +1,21 @@
+This is the plan:
+
+Chess Game!
+
+
+Initialize SDL
+Initialize graphics
+Initialize board
+Player selection
+Gameplay
+	Start of round
+	Piece selected
+		Check possible moves from the piece (Not necessarily legal, like, don't check for checks)
+	Move selected (from the possible ones)
+		Check if move is actually legal
+			If it's not make a visual sign to show the player what he/she missed
+		Check if this move checked the oponnent
+			If yes already check if it's a mate
+	End round
+	Repeat
+Play Again? / Quit
