@@ -2,6 +2,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <utility>
 
 #include <GL/glew.h>
 #include <SDL.h>
@@ -11,35 +12,16 @@
 #define SWIDTH 800
 #define SHEIGHT 450
 
-std::string* source2shader(std::string path)
-{
-	std::string sources[2];
-	std::stringstream buffer;
-
-	std::ifstream source(path);
-	if (!source.is_open())
-	{
-		printf("Unable to read shader source.");
-		return 0;
-	}
-	else
-	{
-		buffer << source.rdbuf();
-		size_t pos = buffer.str().find("arandomstring");
-		sources[0] = buffer.str().substr(0, pos);
-		sources[1] = buffer.str().substr(pos + 14); // 14 == size_in_chars("arandomstring\n")
-
-		printf("vertex shader:\n%s\n", sources[0].c_str());
-		printf("fragment shader:\n%s\n", sources[1].c_str());
-		return sources;
-	}
-}
 
 // Initialize external libraries and create opengl context
 bool init();
 
 // Initialize OpenGl things
-bool initGL();
+bool initGL(std::string shaderSource);
+
+// Helper function to read the shader sources from one file
+// Use "arandomstring\n" to separate the two shaders.
+std::pair<std::string, std::string> source2shader(std::string path);
 
 SDL_Window* window;
 
@@ -91,7 +73,7 @@ bool init()
 					printf("Unable to set swap interval (vsync). Continuing. SDL error: %s\n", SDL_GetError());
 				}
 
-				if (!initGL())
+				if (!initGL("test.glsl"))
 				{
 					printf("Unable to initialize OpenGL\n");
 					success = false;
@@ -103,7 +85,7 @@ bool init()
 	return success;
 }
 
-bool initGL()
+bool initGL(std::string shaderSource)
 {
 	// Create a program
 	GLint shaderProgram = glCreateProgram();
@@ -113,16 +95,39 @@ bool initGL()
 	GLint fragS = glCreateShader(GL_FRAGMENT_SHADER);
 
 	// Find source files
-
+	auto sources = source2shader(shaderSource);
 
 	return true;
 }
 
+std::pair<std::string, std::string> source2shader(std::string path)
+{
+	std::string sources[2];
+	std::string vs;
+	std::string fs;
+	std::stringstream buffer;
+
+	std::ifstream source(path);
+	if (!source.is_open())
+	{
+		printf("Unable to read shader source.");
+		return std::make_pair("error","error");
+	}
+	else
+	{
+		buffer << source.rdbuf();
+		size_t pos = buffer.str().find("arandomstring");
+		vs = sources[0] = buffer.str().substr(0, pos);
+		fs = sources[1] = buffer.str().substr(pos + 14); // 14 == size_in_chars("arandomstring\n")
+
+		return std::make_pair(vs,fs);
+	}
+}
+
+
 int main(int argc, char** argv)
 {
 	printf("hello world\n");
-	source2shader("test.glsl");
-	//init();
-	//initGL();
+	init();
 	return 0;
 }
