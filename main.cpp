@@ -1,4 +1,8 @@
 #include <stdio.h>
+#include <string>
+#include <fstream>
+#include <sstream>
+
 #include <GL/glew.h>
 #include <SDL.h>
 #include <SDL_opengl.h>
@@ -7,6 +11,29 @@
 #define SWIDTH 800
 #define SHEIGHT 450
 
+std::string* source2shader(std::string path)
+{
+	std::string sources[2];
+	std::stringstream buffer;
+
+	std::ifstream source(path);
+	if (!source.is_open())
+	{
+		printf("Unable to read shader source.");
+		return 0;
+	}
+	else
+	{
+		buffer << source.rdbuf();
+		size_t pos = buffer.str().find("arandomstring");
+		sources[0] = buffer.str().substr(0, pos);
+		sources[1] = buffer.str().substr(pos + 14); // 14 == size_in_chars("arandomstring\n")
+
+		printf("vertex shader:\n%s\n", sources[0].c_str());
+		printf("fragment shader:\n%s\n", sources[1].c_str());
+		return sources;
+	}
+}
 
 // Initialize external libraries and create opengl context
 bool init();
@@ -78,12 +105,24 @@ bool init()
 
 bool initGL()
 {
+	// Create a program
+	GLint shaderProgram = glCreateProgram();
+
+	// Create shaders
+	GLint vertexS = glCreateShader(GL_VERTEX_SHADER);
+	GLint fragS = glCreateShader(GL_FRAGMENT_SHADER);
+
+	// Find source files
+
+
 	return true;
 }
 
 int main(int argc, char** argv)
 {
 	printf("hello world\n");
-	init();
+	source2shader("test.glsl");
+	//init();
+	//initGL();
 	return 0;
 }
