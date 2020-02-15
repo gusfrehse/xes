@@ -17,11 +17,17 @@
 bool init();
 
 // Initialize OpenGl things
-bool initGL(std::string shaderSource);
+GLint createShader(std::string shaderSource);
 
 // Helper function to read the shader sources from one file
 // Use "arandomstring\n" to separate the two shaders.
 std::pair<std::string, std::string> source2shader(std::string path);
+
+// Debug for when shaders fail
+void logShader(GLuint shader);
+
+// Debug for when shader programs fail
+void logProgram(GLuint program);
 
 SDL_Window* window;
 
@@ -37,8 +43,8 @@ bool init()
 	else
 	{
 		// Set openGL version
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 4);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 		
 		// Create window
@@ -72,12 +78,6 @@ bool init()
 				{
 					printf("Unable to set swap interval (vsync). Continuing. SDL error: %s\n", SDL_GetError());
 				}
-
-				if (!initGL("test.glsl"))
-				{
-					printf("Unable to initialize OpenGL\n");
-					success = false;
-				}
 			}
 		}
 	}
@@ -85,7 +85,7 @@ bool init()
 	return success;
 }
 
-bool initGL(std::string shaderSource)
+GLint createShader(std::string shaderSource)
 {
 	// Create a program
 	GLint shaderProgram = glCreateProgram();
@@ -95,9 +95,45 @@ bool initGL(std::string shaderSource)
 	GLint fragS = glCreateShader(GL_FRAGMENT_SHADER);
 
 	// Find source files
-	auto sources = source2shader(shaderSource);
+	std::pair<std::string, std::string> sources = source2shader(shaderSource);
+	const GLchar* vertexSource = sources.first.c_str();
+	glShaderSource(vertexS, 1, &vertexSource, NULL);
+	const GLchar* fragmentSource = sources.second.c_str();
+	glShaderSource(fragS, 1, &fragmentSource, NULL);
 
-	return true;
+	// Compile vertex shader
+	glCompileShader(vertexS);
+	GLint status = GL_FALSE;
+	glGetShaderiv(vertexS, GL_COMPILE_STATUS, &status);
+	if (status != GL_TRUE)
+	{
+		printf("Vertex shader compilation failed. Index: %d\n", vertexS);
+		logShader(vertexS);
+	}
+
+	// Compile fragment shader
+	glCompileShader(fragS);
+	status = GL_FALSE;
+	glGetShaderiv(fragS, GL_COMPILE_STATUS, &status);
+	if (status != GL_TRUE)
+	{
+		printf("Fragment shader compilation failed. Index: %d\n", fragS);
+		logShader(fragS);
+	}
+
+	// Attach shader to program and link them
+	glAttachShader(shaderProgram, vertexS);
+	glAttachShader(shaderProgram, fragS);
+	
+	glLinkProgram(shaderProgram);
+	glGetShaderiv(shaderProgram, GL_LINK_STATUS, &status);
+	if (status != GL_TRUE)
+	{
+		printf("Shader program linking failed. Program index: %d\n", shaderProgram);
+		logProgram(shaderProgram);
+	}
+
+	return shaderProgram;
 }
 
 std::pair<std::string, std::string> source2shader(std::string path)
@@ -117,17 +153,76 @@ std::pair<std::string, std::string> source2shader(std::string path)
 	{
 		buffer << source.rdbuf();
 		size_t pos = buffer.str().find("arandomstring");
+		if (pos == std::string::npos)
+		{ 
+			printf("Invalid shader file. Recall the vertex shader should be first,"
+				"then the string \"arandomstring\", then the fragment shader");
+			return std::make_pair("ERROR","CHECK LOGS");
+		}
+		else
+		{
 		vs = sources[0] = buffer.str().substr(0, pos);
 		fs = sources[1] = buffer.str().substr(pos + 14); // 14 == size_in_chars("arandomstring\n")
 
 		return std::make_pair(vs,fs);
+		}
 	}
 }
 
+void logShader(GLuint shader)
+{
+	if (glIsShader(shader))
+	{
+		int logLength = 0;
+		int maxLength = 0;
+
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
+
+		char* log = new char[maxLength];
+
+		glGetShaderInfoLog(shader, maxLength, &logLength, log);
+		if (logLength > 0)
+		{
+			printf("%s\n", log);
+		}
+
+		delete[] log;
+	}
+	else
+	{
+		printf("The shader %d is not a shader, but was requested to be logged as one\n", shader);
+	}
+}
+
+void logProgram(GLuint program)
+{
+	if (glIsProgram(program))
+	{
+		int logLength = 0;
+		int maxLength = 0;
+		
+		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
+
+		char* log = new char[maxLength];
+
+		glGetProgramInfoLog(program, maxLength, &logLength, log);
+		if (logLength > 0)
+		{
+			printf("%s\n", log);
+		}
+
+		delete[] log;
+	}
+	else
+	{
+		printf("The program %d is not a program, but was requested to be logged as one\n", program);
+	}
+}
 
 int main(int argc, char** argv)
 {
 	printf("hello world\n");
 	init();
+	GLint shaderProgram = createShader("test.glsl");
 	return 0;
 }

@@ -1,18 +1,13 @@
-vertexshader
-gfasdfas
-fasdfasdf
-asdf
-asdf
-asdf
-as
+#version 440 core
+void main()
+{
+	gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
+}
 arandomstring
-fragshader
-asdc
-aca
-ca
-va
-v
-av
-av
+#version 440 core
+out vec4 fragColor;
 
-ava
+void main()
+{
+	fragColor = vec4(1.0, 1.0, 1.0, 1.0);
+}
