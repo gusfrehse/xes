@@ -16,6 +16,13 @@
 // Initialize external libraries and create opengl context
 bool init();
 
+// Render
+void render()
+{
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+
+}
+
 // Initialize OpenGl things
 GLint createShader(std::string shaderSource);
 
@@ -219,10 +226,66 @@ void logProgram(GLuint program)
 	}
 }
 
+
 int main(int argc, char** argv)
 {
 	printf("hello world\n");
 	init();
 	GLint shaderProgram = createShader("test.glsl");
+
+	float vertices[] = {
+		-0.5f, -0.5f,
+		 0.5f, -0.5f,
+		 0.0f, 0.5f
+	};
+
+	// Gen VBO and VAO
+	GLuint VBO, VAO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	// Position attribute
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+
+	// Main loop quit flag
+	bool shouldQuit = false;
+	SDL_Event e;
+	while (!shouldQuit)
+	{
+		while (SDL_PollEvent(&e) != 0)
+		{
+			if (e.type == SDL_QUIT)
+			{
+				shouldQuit = true;
+			}
+			else if (e.type == SDL_KEYDOWN)
+			{
+				switch (e.key.keysym.sym)
+				{
+				case SDLK_SPACE:
+					printf("the space key was pressed\n");
+					break;
+				default:
+					printf("a key was presssed\n");
+					break;
+				}
+			}
+		}
+
+		glClearColor(0.5, 0.5, 0.5, 1.0);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		glUseProgram(shaderProgram);
+		glBindVertexArray(VAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+		SDL_GL_SwapWindow(window);
+	}
 	return 0;
 }
