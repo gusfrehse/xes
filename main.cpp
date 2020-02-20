@@ -9,19 +9,10 @@
 #include <SDL_opengl.h>
 
 #define VSYNC 0
-#define SWIDTH 800
-#define SHEIGHT 450
 
 
 // Initialize external libraries and create opengl context
 bool init();
-
-// Render
-void render()
-{
-	glClearColor(0.0, 0.0, 0.0, 1.0);
-
-}
 
 // Initialize OpenGl things
 GLint createShader(std::string shaderSource);
@@ -37,6 +28,9 @@ void logShader(GLuint shader);
 void logProgram(GLuint program);
 
 SDL_Window* window;
+
+int screenw = 600;
+int screenh = 600;
 
 bool init()
 {
@@ -55,7 +49,8 @@ bool init()
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 		
 		// Create window
-		window = SDL_CreateWindow("Xes", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SWIDTH, SHEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+		window = SDL_CreateWindow("Xes", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screenw, screenh, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+		SDL_SetWindowResizable(window, SDL_TRUE);
 		if (window == NULL)
 		{
 			printf("Unable to create window. SDL error: %s\n", SDL_GetError());
@@ -139,6 +134,9 @@ GLint createShader(std::string shaderSource)
 		printf("Shader program linking failed. Program index: %d\n", shaderProgram);
 		logProgram(shaderProgram);
 	}
+
+	glDeleteShader(fragS);
+	glDeleteShader(vertexS);
 
 	return shaderProgram;
 }
@@ -234,22 +232,33 @@ int main(int argc, char** argv)
 	GLint shaderProgram = createShader("test.glsl");
 
 	float vertices[] = {
-		-0.5f, -0.5f,
+		 0.5f,  0.5f,
 		 0.5f, -0.5f,
-		 0.0f, 0.5f
+		-0.5f, -0.5f,
+		-0.5f,  0.5f
+	};
+
+	GLubyte indices[] = {
+		0, 1, 3,
+		1, 2, 3
 	};
 
 	// Gen VBO and VAO
-	GLuint VBO, VAO;
+	GLuint VBO, VAO, IBO;
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &IBO);
+
 
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
 	// Position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
 
@@ -258,14 +267,15 @@ int main(int argc, char** argv)
 	SDL_Event e;
 	while (!shouldQuit)
 	{
+		// Check for input
 		while (SDL_PollEvent(&e) != 0)
 		{
-			if (e.type == SDL_QUIT)
+			switch (e.type)
 			{
+			case SDL_QUIT:
 				shouldQuit = true;
-			}
-			else if (e.type == SDL_KEYDOWN)
-			{
+				break;
+			case SDL_KEYDOWN:
 				switch (e.key.keysym.sym)
 				{
 				case SDLK_SPACE:
@@ -275,15 +285,25 @@ int main(int argc, char** argv)
 					printf("a key was presssed\n");
 					break;
 				}
+			case SDL_WINDOWEVENT:
+				switch (e.window.event)
+				{
+				case SDL_WINDOWEVENT_SIZE_CHANGED:
+					printf("changed screen size\n");
+					SDL_GL_GetDrawableSize(window, &screenw, &screenh);
+					glViewport(0, 0, screenw, screenh);
+				}
 			}
 		}
 
+		// Setup for drawing
 		glClearColor(0.5, 0.5, 0.5, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, 0);
+		//glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		SDL_GL_SwapWindow(window);
 	}
